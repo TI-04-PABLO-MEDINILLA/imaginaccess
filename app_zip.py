@@ -1079,21 +1079,29 @@ def ejecutar_comando(comando):
             st.warning("No se ha cargado ninguna imagen.")
             return
 
-        pregunta = comando_por_voz("Formule su pregunta sobre la imagen")
-        if pregunta:
+        while True:
+    
+            pregunta = comando_por_voz("¿Cuál es tu pregunta?").strip()
+            if not pregunta:
+                st.warning("No se detectó ninguna pregunta.")
+                return
+
             respuesta = responder_vqa(image, pregunta)
-            st.session_state["respuesta_vqa"] = respuesta
+            st.markdown(f"**Pregunta:** {pregunta}  \n**Respuesta:** {respuesta}")
 
-            st.markdown(f"""
-            **Pregunta:**  {pregunta}  
-            **Respuesta:** {respuesta}
-            """)
-
-            audio = generar_audio(respuesta, idioma=st.session_state["last_lang"], nombre_archivo="respuesta")
-            st.session_state["audio_vqa"] = audio
+            audio = generar_audio(respuesta, idioma=st.session_state["last_lang"],
+                                nombre_archivo="respuesta")
             mostrar_boton_audio(audio)
             st.audio(audio)
-        st.stop()         
+
+            # 2 · ¿Otra pregunta?
+            hablar("¿Quieres hacer otra pregunta? Di sí o no.", nombre="mas_preguntas")
+            seguir = comando_por_voz("Escuchando…").strip().lower()
+            st.success("Se ha detectado "+seguir)
+            if seguir not in ("sí", "si", "s"):
+                # sale del while y por tanto de la función
+                st.success("No se han realizado más preguntas")
+                return
 
     #Cambiar tema de daltonismo
     elif "tema" in comando:
@@ -1145,8 +1153,7 @@ def ejecutar_comando(comando):
     elif "voz" in comando:
         #preguntamos (el micro NO se abre hasta que hablar() termina)
         hablar(
-            "¿Deseas dictar la ruta completa o explorar carpetas? "
-            "Di 'dictar' o 'explorar'.",
+            "Diga, a continuación, el comando que desea ejecutar, en caso de que quiera subir una imagen, diga 'dictar' o 'explorar'",
             nombre="modo_voz"
         )
         modo = comando_por_voz("Escuchando…").strip().lower()
@@ -1187,13 +1194,12 @@ def ejecutar_comando(comando):
                     st.info("Acción cancelada.")
             else:
                 st.warning("No se detectó ninguna ruta.")
-
-       
         elif "explorar" in modo:
             explorar_por_voz()   #función para elegir explorar el sistema de archivos hasta seleccionar la imagen.
 
         else:
-            st.warning("No se entendió la elección. Di 'dictar' o 'explorar'.")
+            st.success(f"Ejecutando el comando... {modo}")
+            ejecutar_comando(modo)
 
 def hablar(texto, nombre="tts", margen=0.4):
     mp3 = generar_audio(texto, idioma=st.session_state.last_lang, nombre_archivo=nombre)
